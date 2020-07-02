@@ -32,9 +32,9 @@
                 return vertexPosition;
             }
 
-            half4 Fragment(float4 pos : SV_POSITION) : SV_Target
+            float4 Fragment(float4 pos : SV_POSITION) : SV_Target
             {
-                half3 albedo = UNITY_READ_FRAMEBUFFER_INPUT(0, pos).rgb;
+                float3 albedo = UNITY_READ_FRAMEBUFFER_INPUT(0, pos).rgb;
                 /*half4 specRoughness = UNITY_READ_FRAMEBUFFER_INPUT(1, pos);
                 half3 normalWS = normalize((UNITY_READ_FRAMEBUFFER_INPUT(2, pos).rgb * 2.0h - 1.0h));
                 float depth = UNITY_READ_FRAMEBUFFER_INPUT(3, pos).r;
@@ -53,7 +53,7 @@
                 half reflectance = BDRF(roughness, normalWS, mainLight.direction, viewDirection);
                 half3 color = (albedo + specular * reflectance) * radiance;*/
                 
-                return half4(albedo, 1.0);
+                return float4(albedo, 1.0);
             }
             ENDHLSL
         }
