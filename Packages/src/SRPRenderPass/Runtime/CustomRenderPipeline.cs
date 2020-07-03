@@ -39,9 +39,11 @@ namespace UnityEngine.Rendering.CustomRenderPipeline
             }
         }
         private Material tonemappingMat;
+        private Material deferredLightingMat;
         public CustomRenderPipeline(CustomRenderPipelineAsset asset)
         {
             tonemappingMat = CoreUtils.CreateEngineMaterial(Shader.Find("Hidden/ToneMapping"));
+            deferredLightingMat = CoreUtils.CreateEngineMaterial(Shader.Find("Hidden/DeferredLighting"));
         }
 
         protected override void Render(ScriptableRenderContext context, Camera[] cameras)
@@ -147,7 +149,12 @@ namespace UnityEngine.Rendering.CustomRenderPipeline
 
         void RenderDeferredLighting(Camera camera, CullingResults cullingResults, ScriptableRenderContext context)
         {
-            
+            // only output world position for now
+            // try to reconstruct world pos
+            CommandBuffer cmd = CommandBufferPool.Get("Reconstruct World Pos");
+            cmd.DrawMesh(CustomRenderPipeline.fullscreenMesh, Matrix4x4.identity, deferredLightingMat, 0, 0);
+            context.ExecuteCommandBuffer(cmd);
+            CommandBufferPool.Release(cmd);
         }
 
 
@@ -167,28 +174,33 @@ namespace UnityEngine.Rendering.CustomRenderPipeline
             var normal = new AttachmentDescriptor(RenderTextureFormat.ARGB2101010);
             var emission = new AttachmentDescriptor(RenderTextureFormat.ARGBHalf);
             var depth = new AttachmentDescriptor(RenderTextureFormat.Depth);
+            var depthSRV = new AttachmentDescriptor(RenderTextureFormat.RFloat);
+            
             
             // At the beginning of the render pass, clear the emission buffer to all black, and the depth buffer to 1.0f
             emission.ConfigureClear(new Color(0.0f, 0.0f, 0.0f, 0.0f), 1.0f, 0);
             depth.ConfigureClear(new Color(), 1.0f, 0);
+            depthSRV.ConfigureClear(new Color(), 1.0f, 0);
             albedo.ConfigureTarget(BuiltinRenderTextureType.CameraTarget, false, true);
-            var attachments = new NativeArray<AttachmentDescriptor>(5, Allocator.Temp);
-            const int depthIndex = 0, albedoIndex = 1, specRoughIndex = 2, normalIndex = 3, emissionIndex = 4;
+            var attachments = new NativeArray<AttachmentDescriptor>(6, Allocator.Temp);
+            const int depthIndex = 0, albedoIndex = 1, specRoughIndex = 2, normalIndex = 3, emissionIndex = 4, depthSRVIndex = 5;
             attachments[depthIndex] = depth;
             attachments[albedoIndex] = albedo;
             attachments[specRoughIndex] = specRough;
             attachments[normalIndex] = normal;
             attachments[emissionIndex] = emission;
+            attachments[depthSRVIndex] = depthSRV;
 
             using (context.BeginScopedRenderPass(camera.pixelWidth, camera.pixelHeight, 1, attachments, depthIndex))
             {
                 attachments.Dispose();
                 // Start the first subpass, GBuffer creation: render to albedo, specRough, normal and emission, no need to read any input attachments
-                var gbufferColors = new NativeArray<int>(4, Allocator.Temp);
+                var gbufferColors = new NativeArray<int>(5, Allocator.Temp);
                 gbufferColors[0] = albedoIndex;
                 gbufferColors[1] = specRoughIndex;
                 gbufferColors[2] = normalIndex;
                 gbufferColors[3] = emissionIndex;
+                gbufferColors[4] = depthSRVIndex;
                 using (context.BeginScopedSubPass(gbufferColors))
                 {
                     gbufferColors.Dispose();
@@ -201,21 +213,22 @@ namespace UnityEngine.Rendering.CustomRenderPipeline
                 // The last parameter indicates whether the depth buffer can be bound as read-only.
                 // Note that some renderers (notably iOS Metal) won't allow reading from the depth buffer while it's bound as Z-buffer,
                 // so those renderers should write the Z into an additional FP32 render target manually in the pixel shader and read from it instead
-                // var lightingColors = new NativeArray<int>(1, Allocator.Temp);
-                // lightingColors[0] = emissionIndex;
-                // var lightingInputs = new NativeArray<int>(4, Allocator.Temp);
-                // lightingInputs[0] = albedoIndex;
-                // lightingInputs[1] = specRoughIndex;
-                // lightingInputs[2] = normalIndex;
-                // lightingInputs[3] = depthIndex;
-                // using (context.BeginScopedSubPass(lightingColors, lightingInputs, true))
-                // {
-                //     lightingColors.Dispose();
-                //     lightingInputs.Dispose();
-                //
-                //     // PushGlobalShadowParams(context);
-                //     RenderDeferredLighting(camera, cullingResults, context);
-                // }
+                var lightingColors = new NativeArray<int>(1, Allocator.Temp);
+                lightingColors[0] = emissionIndex;
+                var lightingInputs = new NativeArray<int>(5, Allocator.Temp);
+                lightingInputs[0] = albedoIndex;
+                lightingInputs[1] = specRoughIndex;
+                lightingInputs[2] = normalIndex;
+                lightingInputs[3] = depthIndex;
+                lightingInputs[4] = depthSRVIndex;
+                using (context.BeginScopedSubPass(lightingColors, lightingInputs, true))
+                {
+                    lightingColors.Dispose();
+                    lightingInputs.Dispose();
+                
+                    // PushGlobalShadowParams(context);
+                    RenderDeferredLighting(camera, cullingResults, context);
+                }
 
                 // Third subpass, tonemapping: Render to albedo (which is bound to the camera target), read from emission.
                 var tonemappingColors = new NativeArray<int>(1, Allocator.Temp);

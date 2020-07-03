@@ -1,4 +1,4 @@
-﻿Shader "Hidden/ToneMapping"
+﻿Shader "Hidden/DeferredLighting"
 {
     SubShader
     {
@@ -25,7 +25,8 @@
             UNITY_DECLARE_FRAMEBUFFER_INPUT_FLOAT(0); // Albedo
             UNITY_DECLARE_FRAMEBUFFER_INPUT_FLOAT(1); // SpecRoughness
             UNITY_DECLARE_FRAMEBUFFER_INPUT_FLOAT(2); // Normal
-            UNITY_DECLARE_FRAMEBUFFER_INPUT_FLOAT(3); // Depth
+            UNITY_DECLARE_FRAMEBUFFER_INPUT_FLOAT(3); // Depth // this cannot be read on ios
+            UNITY_DECLARE_FRAMEBUFFER_INPUT_FLOAT(4); // DepthSRV
 
             float4 Vertex(float4 vertexPosition : POSITION) : SV_POSITION
             {
@@ -34,7 +35,7 @@
 
             float4 Fragment(float4 pos : SV_POSITION) : SV_Target
             {
-                float3 albedo = UNITY_READ_FRAMEBUFFER_INPUT(0, pos).rgb;
+                float3 albedo = UNITY_READ_FRAMEBUFFER_INPUT(4, pos).rgb;
                 /*half4 specRoughness = UNITY_READ_FRAMEBUFFER_INPUT(1, pos);
                 half3 normalWS = normalize((UNITY_READ_FRAMEBUFFER_INPUT(2, pos).rgb * 2.0h - 1.0h));
                 float depth = UNITY_READ_FRAMEBUFFER_INPUT(3, pos).r;
@@ -42,7 +43,7 @@
                 float2 positionNDC = pos.xy * _ScreenSize.zw;
                 float3 positionWS = ComputeWorldSpacePosition(positionNDC, depth, UNITY_MATRIX_I_VP);
                 
-
+                
                 half3 viewDirection = half3(normalize(GetCameraPositionWS() - positionWS));
 
                 Light mainLight = GetMainLight();
