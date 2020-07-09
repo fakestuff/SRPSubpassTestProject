@@ -174,33 +174,33 @@ namespace UnityEngine.Rendering.CustomRenderPipeline
             var normal = new AttachmentDescriptor(RenderTextureFormat.ARGB2101010);
             var emission = new AttachmentDescriptor(RenderTextureFormat.ARGBHalf);
             var depth = new AttachmentDescriptor(RenderTextureFormat.Depth);
-            var depthSRV = new AttachmentDescriptor(RenderTextureFormat.RFloat);
+            var depthSRV = new AttachmentDescriptor(RenderTextureFormat.ARGBHalf);
             
             
             // At the beginning of the render pass, clear the emission buffer to all black, and the depth buffer to 1.0f
             emission.ConfigureClear(new Color(0.0f, 0.0f, 0.0f, 0.0f), 1.0f, 0);
-            depth.ConfigureClear(new Color(), 1.0f, 0);
-            depthSRV.ConfigureClear(new Color(), 1.0f, 0);
+            depth.ConfigureClear(new Color(), 1.0f, 0); 
+            //depthSRV.ConfigureClear(new Color(), 1.0f, 0);
             albedo.ConfigureTarget(BuiltinRenderTextureType.CameraTarget, false, true);
-            var attachments = new NativeArray<AttachmentDescriptor>(6, Allocator.Temp);
+            var attachments = new NativeArray<AttachmentDescriptor>(5, Allocator.Temp);
             const int depthIndex = 0, albedoIndex = 1, specRoughIndex = 2, normalIndex = 3, emissionIndex = 4, depthSRVIndex = 5;
             attachments[depthIndex] = depth;
             attachments[albedoIndex] = albedo;
             attachments[specRoughIndex] = specRough;
             attachments[normalIndex] = normal;
             attachments[emissionIndex] = emission;
-            attachments[depthSRVIndex] = depthSRV;
+            //attachments[depthSRVIndex] = depthSRV;
 
             using (context.BeginScopedRenderPass(camera.pixelWidth, camera.pixelHeight, 1, attachments, depthIndex))
             {
                 attachments.Dispose();
                 // Start the first subpass, GBuffer creation: render to albedo, specRough, normal and emission, no need to read any input attachments
-                var gbufferColors = new NativeArray<int>(5, Allocator.Temp);
+                var gbufferColors = new NativeArray<int>(4, Allocator.Temp);
                 gbufferColors[0] = albedoIndex;
                 gbufferColors[1] = specRoughIndex;
                 gbufferColors[2] = normalIndex;
                 gbufferColors[3] = emissionIndex;
-                gbufferColors[4] = depthSRVIndex;
+                //gbufferColors[4] = depthSRVIndex;
                 using (context.BeginScopedSubPass(gbufferColors))
                 {
                     gbufferColors.Dispose();
@@ -214,13 +214,12 @@ namespace UnityEngine.Rendering.CustomRenderPipeline
                 // Note that some renderers (notably iOS Metal) won't allow reading from the depth buffer while it's bound as Z-buffer,
                 // so those renderers should write the Z into an additional FP32 render target manually in the pixel shader and read from it instead
                 var lightingColors = new NativeArray<int>(1, Allocator.Temp);
-                lightingColors[0] = emissionIndex;
-                var lightingInputs = new NativeArray<int>(5, Allocator.Temp);
+                lightingColors[0] = albedoIndex;
+                var lightingInputs = new NativeArray<int>(1, Allocator.Temp);
                 lightingInputs[0] = albedoIndex;
-                lightingInputs[1] = specRoughIndex;
-                lightingInputs[2] = normalIndex;
-                lightingInputs[3] = depthIndex;
-                lightingInputs[4] = depthSRVIndex;
+                // lightingInputs[1] = specRoughIndex;
+                // lightingInputs[2] = normalIndex;
+                // //lightingInputs[3] = depthSRVIndex;
                 using (context.BeginScopedSubPass(lightingColors, lightingInputs, true))
                 {
                     lightingColors.Dispose();
@@ -234,7 +233,7 @@ namespace UnityEngine.Rendering.CustomRenderPipeline
                 var tonemappingColors = new NativeArray<int>(1, Allocator.Temp);
                 tonemappingColors[0] = albedoIndex;
                 var tonemappingInputs = new NativeArray<int>(1, Allocator.Temp);
-                tonemappingInputs[0] = emissionIndex;
+                tonemappingInputs[0] = albedoIndex;
                 using (context.BeginScopedSubPass(tonemappingColors, tonemappingInputs, true))
                 {
                     tonemappingColors.Dispose();

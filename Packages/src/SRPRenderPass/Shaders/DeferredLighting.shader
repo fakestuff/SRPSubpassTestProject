@@ -23,10 +23,9 @@
             //#include "LWRP/ShaderLibrary/Lighting.hlsl"
             #include "Packages/com.render-pipelines.custom/ShaderLibrary/FrameBufferFetchUtl.hlsl"
             UNITY_DECLARE_FRAMEBUFFER_INPUT_FLOAT(0); // Albedo
-            UNITY_DECLARE_FRAMEBUFFER_INPUT_FLOAT(1); // SpecRoughness
-            UNITY_DECLARE_FRAMEBUFFER_INPUT_FLOAT(2); // Normal
-            UNITY_DECLARE_FRAMEBUFFER_INPUT_FLOAT(3); // Depth // this cannot be read on ios
-            UNITY_DECLARE_FRAMEBUFFER_INPUT_FLOAT(4); // DepthSRV
+            //UNITY_DECLARE_FRAMEBUFFER_INPUT_FLOAT(1); // SpecRoughness
+            //UNITY_DECLARE_FRAMEBUFFER_INPUT_FLOAT(2); // Normal
+            //UNITY_DECLARE_FRAMEBUFFER_INPUT_FLOAT(3); // DepthSRV
 
             float4 Vertex(float4 vertexPosition : POSITION) : SV_POSITION
             {
@@ -35,7 +34,7 @@
 
             float4 Fragment(float4 pos : SV_POSITION) : SV_Target
             {
-                float3 albedo = UNITY_READ_FRAMEBUFFER_INPUT(4, pos).rgb;
+                float3 albedo = UNITY_READ_FRAMEBUFFER_INPUT(0, pos).rgb;
                 /*half4 specRoughness = UNITY_READ_FRAMEBUFFER_INPUT(1, pos);
                 half3 normalWS = normalize((UNITY_READ_FRAMEBUFFER_INPUT(2, pos).rgb * 2.0h - 1.0h));
                 float depth = UNITY_READ_FRAMEBUFFER_INPUT(3, pos).r;
@@ -54,7 +53,7 @@
                 half3 radiance = mainLight.color * (mainLight.attenuation * NdotL);
                 half reflectance = BDRF(roughness, normalWS, mainLight.direction, viewDirection);
                 half3 color = (albedo + specular * reflectance) * radiance;*/
-                
+                albedo.r = 0;
                 return float4(albedo, 1.0);
             }
             ENDHLSL

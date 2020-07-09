@@ -53,7 +53,7 @@
                 half3 radiance = mainLight.color * (mainLight.attenuation * NdotL);
                 half reflectance = BDRF(roughness, normalWS, mainLight.direction, viewDirection);
                 half3 color = (albedo + specular * reflectance) * radiance;*/
-                
+                albedo.g = 0;
                 return float4(albedo, 1.0);
             }
             ENDHLSL

@@ -98,14 +98,13 @@
                 out half4 GBuffer0 : SV_Target0,
                 out half4 GBuffer1 : SV_Target1,
                 out half4 GBuffer2 : SV_Target2,
-                out half4 GBuffer3 : SV_Target3,
-                out half4 GBuffer4 : SV_Target4)
+                out half4 GBuffer3 : SV_Target3)
             {
-                GBuffer0 = half4(0.3,0,0,1);//SAMPLE_TEXTURE2D(_BaseMap, sampler_BaseMap, IN.uv) * _BaseColor;
+                GBuffer0 = SAMPLE_TEXTURE2D(_BaseMap, sampler_BaseMap, IN.uv) * _BaseColor;//SAMPLE_TEXTURE2D(_BaseMap, sampler_BaseMap, IN.uv) * _BaseColor;
                 GBuffer1 = half4(0.3,0,0,1);
-                GBuffer2 = half4(0,0,0,1);
+                GBuffer2 = SAMPLE_TEXTURE2D(_BaseMap, sampler_BaseMap, IN.uv) * _BaseColor;
                 GBuffer3 = SAMPLE_TEXTURE2D(_BaseMap, sampler_BaseMap, IN.uv) * _BaseColor;
-                GBuffer4 = IN.positionCS.z;
+                //GBuffer4 = IN.positionCS.z;
             }
             ENDHLSL
         }
